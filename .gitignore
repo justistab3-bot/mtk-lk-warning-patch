@@ -1,0 +1,29 @@
+# ---- 固件镜像：绝对不能提交（体积大且可能含设备私密数据）----
+*.img
+*.bin
+!docs/*.png
+
+# ---- PyInstaller ----
+build/
+dist/
+*.spec
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- 工具运行产物 ----
+*_original_backup.*
+*_patched.*
+LKTool_cli.log
+LKTool_error.log
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

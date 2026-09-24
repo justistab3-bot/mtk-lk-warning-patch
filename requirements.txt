@@ -1,0 +1,3 @@
+# 运行 GUI / CLI 本身只需要标准库 + tkinter
+# capstone 是可选的：仅用于在「校验」里显示补丁点的反汇编，缺失时自动跳过
+capstone>=5.0
