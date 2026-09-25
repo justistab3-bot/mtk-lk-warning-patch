@@ -70,6 +70,10 @@ def run_cli(argv):
     s = core.scan(data)
     print('文件     :', src)
     print('大小     : %s   MD5: %s' % (core.human_size(s['size']), s['md5']))
+    print('适配状态 : %s' % s['fit'])
+    if not s['fit_ok']:
+        print('镜像不匹配，已拦截，未做任何处理。')
+        return 2
     h = s['header']
     print('头部     : %s  magic=0x%08X size=0x%X name=%r'
           % ('OK' if h['valid'] else '异常', h['magic'], h['size'], h['name']))

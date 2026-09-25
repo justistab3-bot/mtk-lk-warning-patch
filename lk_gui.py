@@ -106,20 +106,35 @@ class App(tk.Tk):
         self.var_bak = tk.BooleanVar(value=True)
         self.var_ver = tk.BooleanVar(value=True)
         self.var_inplace = tk.BooleanVar(value=False)
-        ttk.Checkbutton(f3, variable=self.var_a,
-                        text='补丁 A（关键）：跳过橙/红状态警告与 5 秒启动延时'
+        tk.Checkbutton(f3, variable=self.var_a,
+                        text='补丁 A（关键）：跳过橙/红状态警告与 5 秒启动延时',
+                        bg=C_BG, fg=C_TEXT, activebackground=C_BG,
+                        activeforeground=C_TEXT, highlightthickness=0,
+                        bd=0, font=(self.font_ui, 9)
                         ).grid(row=0, column=0, sticky='w')
-        ttk.Checkbutton(f3, variable=self.var_b,
-                        text='补丁 B：清空警告文本字符串（额外保险，不影响内核参数）'
+        tk.Checkbutton(f3, variable=self.var_b,
+                        text='补丁 B：清空警告文本字符串（额外保险，不影响内核参数）',
+                        bg=C_BG, fg=C_TEXT, activebackground=C_BG,
+                        activeforeground=C_TEXT, highlightthickness=0,
+                        bd=0, font=(self.font_ui, 9)
                         ).grid(row=1, column=0, sticky='w')
-        sub = ttk.Frame(f3)
+        sub = tk.Frame(f3, bg=C_BG)
         sub.grid(row=2, column=0, sticky='w', pady=(6, 0))
-        ttk.Checkbutton(sub, variable=self.var_bak,
-                        text='自动备份原始镜像').grid(row=0, column=0)
-        ttk.Checkbutton(sub, variable=self.var_ver,
-                        text='生成校验报告').grid(row=0, column=1, padx=16)
-        ttk.Checkbutton(sub, variable=self.var_inplace,
-                        text='直接覆盖原文件（覆盖前强制备份）').grid(row=0, column=2)
+        tk.Checkbutton(sub, variable=self.var_bak,
+                        text='自动备份原始镜像', bg=C_BG, fg=C_TEXT,
+                        activebackground=C_BG, activeforeground=C_TEXT,
+                        highlightthickness=0, bd=0, font=(self.font_ui, 9)
+                        ).grid(row=0, column=0)
+        tk.Checkbutton(sub, variable=self.var_ver,
+                        text='生成校验报告', bg=C_BG, fg=C_TEXT,
+                        activebackground=C_BG, activeforeground=C_TEXT,
+                        highlightthickness=0, bd=0, font=(self.font_ui, 9)
+                        ).grid(row=0, column=1, padx=16)
+        tk.Checkbutton(sub, variable=self.var_inplace,
+                        text='直接覆盖原文件（覆盖前强制备份）', bg=C_BG, fg=C_TEXT,
+                        activebackground=C_BG, activeforeground=C_TEXT,
+                        highlightthickness=0, bd=0, font=(self.font_ui, 9)
+                        ).grid(row=0, column=2)
 
         # 4. 按钮
         f4 = ttk.Frame(root)
@@ -208,10 +223,13 @@ class App(tk.Tk):
             return
         for p in found:
             v = tk.BooleanVar(value=True)
-            ttk.Checkbutton(self.file_box, variable=v,
-                            text='%s   (%s)' % (os.path.basename(p),
-                                                core.human_size(os.path.getsize(p)))
-                            ).pack(side='left', padx=(0, 20))
+            tk.Checkbutton(self.file_box, variable=v,
+                           text='%s   (%s)' % (os.path.basename(p),
+                                               core.human_size(os.path.getsize(p))),
+                           bg=C_BG, fg=C_TEXT, activebackground=C_BG,
+                           activeforeground=C_TEXT, highlightthickness=0,
+                           bd=0, font=(self.font_ui, 9)
+                           ).pack(side='left', padx=(0, 20))
             self.files.append((p, v))
         same = ''
         if len(found) >= 2:
@@ -244,6 +262,7 @@ class App(tk.Tk):
             s = core.scan(data)
             self.log('【%s】 %s   MD5 %s' % (os.path.basename(p),
                                             core.human_size(s['size']), s['md5']), 'head')
+            self.log('  适配状态: %s' % s['fit'], 'ok' if s['fit_ok'] else 'err')
             h = s['header']
             if h['valid']:
                 self.log('  头部: magic 0x%08X · ext 0x%08X · size 0x%X · name %r'
@@ -294,7 +313,7 @@ class App(tk.Tk):
                     '开' if self.var_b.get() else '关',
                     '开' if self.var_bak.get() else '关',
                     '是' if self.var_inplace.get() else '否'))
-        outputs, problems = [], []
+        outputs, problems, blocked = [], [], []
 
         for idx, p in enumerate(paths, 1):
             name = os.path.basename(p)
@@ -305,6 +324,12 @@ class App(tk.Tk):
             except OSError as e:
                 self.log('  读取失败: %s' % e, 'err')
                 problems.append(name)
+                continue
+            # 不匹配镜像直接拦截：不备份、不打补丁、不输出
+            s = core.scan(data)
+            if not s['fit_ok']:
+                self.log('  已拦截: %s' % s['fit'], 'err')
+                blocked.append('%s（%s）' % (name, s['fit']))
                 continue
             self.log('  原始 MD5 : %s' % core.md5(data))
 
@@ -358,6 +383,10 @@ class App(tk.Tk):
 
         self.rule('完成')
         self.log('成功输出 %d 个文件' % len(outputs), 'ok' if not problems else 'warn')
+        if blocked:
+            self.log('已拦截 %d 个不匹配镜像（未做任何处理）:' % len(blocked), 'err')
+            for b in blocked:
+                self.log('  - ' + b, 'err')
         if problems:
             self.log('以下文件有问题: %s' % ', '.join(problems), 'err')
         self.log('')
@@ -366,6 +395,9 @@ class App(tk.Tk):
         self.status.set('补丁完成')
 
         msg = '补丁完成，输出 %d 个文件。' % len(outputs)
+        if blocked:
+            msg += '\n\n已拦截 %d 个不匹配镜像（未做任何处理）：\n  %s' \
+                   % (len(blocked), '\n  '.join(blocked))
         if problems:
             msg += '\n\n注意：%s 处理异常，请看日志。' % ', '.join(problems)
         msg += '\n\n刷入提醒：lk 与 lk2 都要刷，只刷一个警告可能依旧存在。'
@@ -382,8 +414,20 @@ class App(tk.Tk):
         for p in paths:
             bak = core.backup_path(p)
             if not os.path.isfile(bak):
-                self.log('%s: 没有备份 %s，无法对比'
-                         % (os.path.basename(p), os.path.basename(bak)), 'warn')
+                # 区分"不匹配被拦截"与"从未处理"，给出完整说明
+                blocked_fit = ''
+                try:
+                    s = core.scan(core.read_file(p))
+                    if not s['fit_ok']:
+                        blocked_fit = s['fit']
+                except OSError:
+                    pass
+                if blocked_fit:
+                    self.log('%s: 不匹配镜像，已拦截未处理 —— %s（因此无备份、无补丁输出可对比）'
+                             % (os.path.basename(p), blocked_fit), 'warn')
+                else:
+                    self.log('%s: 没有备份 %s，无法对比'
+                             % (os.path.basename(p), os.path.basename(bak)), 'warn')
                 continue
             cand = [c for c in (core.patched_path(p), p) if os.path.isfile(c)]
             if not cand:

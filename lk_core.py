@@ -162,6 +162,20 @@ def scan(data: bytes) -> Dict:
     tail_off = 0x200 + hdr.get('size', 0)
     tail = data[tail_off:] if 0 < tail_off < len(data) else b''
     tail_nonzero = sum(1 for b in tail if b != 0)
+    # 适配结论：一眼判断该镜像能否打补丁
+    if not hdr['valid']:
+        if not any(data):
+            fit, fit_ok = '不匹配（全零文件，疑似空占位槽位，无需打补丁）', False
+        else:
+            fit, fit_ok = '不匹配（非 MTK LK 镜像：magic 错误）', False
+    elif p:
+        fit, fit_ok = '适配（%s平台，可打补丁）' % p['arch'], True
+    elif already:
+        fit, fit_ok = '已打过补丁（无原始特征码）', True
+    elif not warns:
+        fit, fit_ok = '不匹配（无特征码且无警告文本，可能是空占位文件）', False
+    else:
+        fit, fit_ok = '不匹配（特征码未找到，该镜像不支持去延时）', False
     return {
         'size': len(data),
         'md5': md5(data),
@@ -172,6 +186,8 @@ def scan(data: bytes) -> Dict:
         'params': params,
         'payload_end': tail_off,
         'tail_nonzero': tail_nonzero,
+        'fit': fit,
+        'fit_ok': fit_ok,
     }
 
 
@@ -268,7 +284,8 @@ def disasm_patch(data: bytes, offset: int, count: int = 5) -> List[str]:
 # ----------------------------------------------------------------------------
 # 文件辅助
 # ----------------------------------------------------------------------------
-LK_NAMES = ['lk.img', 'lk2.img', 'lk.bin', 'lk2.bin']
+LK_NAMES = ['lk.img', 'lk2.img', 'lk.bin', 'lk2.bin',
+            'lk_a.img', 'lk_b.img', 'lk_a.bin', 'lk_b.bin']
 
 
 def detect_lk_files(folder: str) -> List[str]:
